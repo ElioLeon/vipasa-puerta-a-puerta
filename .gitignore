@@ -1,0 +1,5 @@
+# Contienen los campos Nombre/Telefono/Correo del Excel original (pueden tener datos
+# personales si se rellenan en el futuro) - nunca deben subirse a un repositorio publico.
+data/buildings_raw.json
+data/buildings_geocoded.json
+data/geocode_log.txt

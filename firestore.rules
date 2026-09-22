@@ -1,0 +1,8 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /vipasa_gijon_oviedo/{buildingId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
