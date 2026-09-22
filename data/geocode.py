@@ -31,7 +31,25 @@ def main():
     with open(IN_PATH, "r", encoding="utf-8") as f:
         buildings = json.load(f)
 
-    log = open(LOG_PATH, "w", encoding="utf-8")
+    # Reutiliza coordenadas ya calculadas en una ejecucion anterior (evita volver
+    # a geocodificar direcciones ya resueltas al ampliar el area de la campana).
+    try:
+        with open(OUT_PATH, "r", encoding="utf-8") as f:
+            previous = json.load(f)
+        prev_by_id = {b["id"]: b for b in previous if b.get("lat") is not None}
+        reused = 0
+        for b in buildings:
+            prev = prev_by_id.get(b["id"])
+            if prev:
+                b["lat"] = prev["lat"]
+                b["lon"] = prev["lon"]
+                reused += 1
+        print(f"Reutilizando {reused} edificios ya geocodificados de una ejecucion previa.")
+    except FileNotFoundError:
+        pass
+
+    log = open(LOG_PATH, "a", encoding="utf-8")
+    log.write(f"\n--- nueva ejecucion: {len(buildings)} edificios totales ---\n")
     ok = 0
     fail = 0
 

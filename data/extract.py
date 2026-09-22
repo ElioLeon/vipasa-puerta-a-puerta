@@ -5,7 +5,7 @@ import re
 SRC = r"C:\Users\eliom\OneDrive\Escritorio\Claude\SII\Documentos\Viviendas VIPASA.xlsx"
 OUT = r"C:\Users\eliom\OneDrive\Escritorio\Claude\SII\VIPASA-App\data\buildings_raw.json"
 
-TARGET_MUNIS = {"GIJON", "OVIEDO"}
+TARGET_MUNIS = None  # None = todos los municipios de Asturias
 
 wb = openpyxl.load_workbook(SRC, data_only=True, read_only=True)
 ws = wb["Viviendas"]
@@ -27,7 +27,7 @@ idx = {name: i for i, name in enumerate(header)}
 count = 0
 for row in rows:
     municipio = norm(row[idx["Municipio"]]).upper()
-    if municipio not in TARGET_MUNIS:
+    if TARGET_MUNIS is not None and municipio not in TARGET_MUNIS:
         continue
     direccion = norm(row[idx["DIRECCION"]])
     numero = norm(row[idx["Nº"]])

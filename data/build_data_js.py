@@ -20,6 +20,8 @@ for b in buildings:
         "municipio": b["municipio"],
         "lat": b["lat"],
         "lon": b["lon"],
+        # "calle" o ausente = precision de direccion; "localidad"/"municipio" = aproximado
+        "geocodeLevel": b.get("geocode_level", "calle"),
         # Se excluyen deliberadamente nombre/telefono/correo: este archivo se publica
         # en un repositorio publico (GitHub Pages).
         "units": [

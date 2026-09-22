@@ -24,6 +24,7 @@ let activeFilters = {
   municipios: new Set(),
   localidad: "",
   estados: new Set(),
+  extra: new Set(), // "datosRecogidos" | "afiliado"
   search: "",
 };
 
@@ -44,6 +45,12 @@ function unitStatus(buildingId, unitIndex) {
   return (u && u.estado) || "sin_visitar";
 }
 
+function unitFlag(buildingId, unitIndex, key) {
+  const b = statusData[buildingId];
+  const u = b && b[unitIndex];
+  return !!(u && u[key]);
+}
+
 function buildingAggregateColor(building) {
   const n = building.units.length;
   const counts = {};
@@ -61,10 +68,15 @@ function buildingAggregateColor(building) {
   return COLORS.mixto;
 }
 
-function makeIcon(color) {
+function isApprox(building) {
+  return building.geocodeLevel === "localidad" || building.geocodeLevel === "municipio";
+}
+
+function makeIcon(color, approx) {
+  const cls = approx ? "marker-badge marker-badge-approx" : "marker-badge";
   return L.divIcon({
     className: "",
-    html: `<div class="marker-badge" style="background:${color}"></div>`,
+    html: `<div class="${cls}" style="background:${color}"></div>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
   });
@@ -81,6 +93,16 @@ function buildingMatchesFilters(b) {
     let match = false;
     for (let i = 0; i < b.units.length; i++) {
       if (activeFilters.estados.has(unitStatus(b.id, i))) { match = true; break; }
+    }
+    if (!match) return false;
+  }
+  if (activeFilters.extra.size) {
+    let match = false;
+    for (let i = 0; i < b.units.length; i++) {
+      for (const key of activeFilters.extra) {
+        if (unitFlag(b.id, i, key)) { match = true; break; }
+      }
+      if (match) break;
     }
     if (!match) return false;
   }
@@ -104,13 +126,14 @@ function renderMarkers() {
     visible++;
     const color = buildingAggregateColor(b);
     if (color === COLORS.contactado) contactadas++;
+    const approx = isApprox(b);
     let marker = markers.get(b.id);
     if (!marker) {
-      marker = L.marker([b.lat, b.lon], { icon: makeIcon(color) });
+      marker = L.marker([b.lat, b.lon], { icon: makeIcon(color, approx) });
       marker.on("click", () => openBuilding(b));
       markers.set(b.id, marker);
     } else {
-      marker.setIcon(makeIcon(color));
+      marker.setIcon(makeIcon(color, approx));
     }
     markerCluster.addLayer(marker);
   }
@@ -122,7 +145,14 @@ function renderMarkers() {
 // ---------- Building panel ----------
 function openBuilding(b) {
   document.getElementById("buildingTitle").textContent = `${b.direccion} ${b.numero}`;
-  document.getElementById("buildingSubtitle").textContent = `${b.localidad}, ${b.municipio} · ${b.units.length} vivienda(s)`;
+  const base = `${b.localidad}, ${b.municipio} · ${b.units.length} vivienda(s)`;
+  const subtitleEl = document.getElementById("buildingSubtitle");
+  if (isApprox(b)) {
+    const nivel = b.geocodeLevel === "municipio" ? "del municipio" : "del pueblo";
+    subtitleEl.innerHTML = `${base}<br><span class="approx-warning">⚠ Ubicación aproximada (centro ${nivel}) — confirma la dirección exacta sobre el terreno.</span>`;
+  } else {
+    subtitleEl.textContent = base;
+  }
 
   const list = document.getElementById("unitsList");
   list.innerHTML = "";
@@ -153,6 +183,27 @@ function openBuilding(b) {
       row.appendChild(btn);
     });
     card.appendChild(row);
+
+    const checksRow = document.createElement("div");
+    checksRow.className = "unit-checks-row";
+    [
+      { key: "datosRecogidos", label: "Datos de contacto recogidos" },
+      { key: "afiliado", label: "Afiliado/a al sindicato" },
+    ].forEach(({ key, label }) => {
+      const wrap = document.createElement("label");
+      wrap.className = "check-label";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = unitFlag(b.id, idx, key);
+      input.addEventListener("change", async () => {
+        await store.setUnitStatus(b.id, idx, { [key]: input.checked });
+        renderMarkers();
+      });
+      wrap.appendChild(input);
+      wrap.appendChild(document.createTextNode(" " + label));
+      checksRow.appendChild(wrap);
+    });
+    card.appendChild(checksRow);
 
     const noteVal = (statusData[b.id] && statusData[b.id][idx] && statusData[b.id][idx].nota) || "";
     const note = document.createElement("textarea");
@@ -225,6 +276,27 @@ function setupFilters() {
       renderMarkers();
     });
     estadoWrap.appendChild(chip);
+  });
+
+  const extraWrap = document.getElementById("extraFilters");
+  [
+    { key: "datosRecogidos", label: "Datos recogidos" },
+    { key: "afiliado", label: "Afiliado/a" },
+  ].forEach((e) => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = e.label;
+    chip.addEventListener("click", () => {
+      if (activeFilters.extra.has(e.key)) {
+        activeFilters.extra.delete(e.key);
+        chip.classList.remove("active");
+      } else {
+        activeFilters.extra.add(e.key);
+        chip.classList.add("active");
+      }
+      renderMarkers();
+    });
+    extraWrap.appendChild(chip);
   });
 
   refreshLocalidadOptions();
