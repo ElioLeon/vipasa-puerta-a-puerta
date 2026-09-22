@@ -27,6 +27,8 @@ idx = {name: i for i, name in enumerate(header)}
 count = 0
 for row in rows:
     municipio = norm(row[idx["Municipio"]]).upper()
+    if not municipio:
+        continue  # filas vacias o de totales al final de la hoja
     if TARGET_MUNIS is not None and municipio not in TARGET_MUNIS:
         continue
     direccion = norm(row[idx["DIRECCION"]])

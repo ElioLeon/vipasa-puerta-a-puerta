@@ -3,3 +3,4 @@
 data/buildings_raw.json
 data/buildings_geocoded.json
 data/geocode_log.txt
+data/geocode_fallback_log.txt

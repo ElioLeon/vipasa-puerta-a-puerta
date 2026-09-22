@@ -92,6 +92,11 @@ python geocode.py     # geocodifica solo los edificios nuevos (reutiliza los ya 
 python build_data_js.py   # regenera js/data.js
 ```
 
+**Importante**: después de regenerar `js/data.js`, sube en 1 el número de versión en
+`index.html` (`<script type="module" src="js/data.js?v=2">` → `?v=3`, etc.). Los navegadores
+cachean ese archivo con fuerza; sin cambiar el número, los móviles que ya usaron la app antes
+podrían seguir viendo datos antiguos hasta hacer una recarga forzada.
+
 ## Estructura del proyecto
 
 ```
